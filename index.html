@@ -13,15 +13,20 @@
     </div>
     <script type="text/template" id="edit-user-template">
     <form class ="edit-user-form">
-        <legend>creat user</legend>
+        <legend><%= user ? 'Update':'create'%> user</legend>
         <label>First Name</label> 
-        <input type="text" name='firstname'/>
+        <input type="text" name='firstname' value="<%= user ? user.get('firstname'):''%>" />
         <label>last Name</label> 
-        <input type="text" name='lastname'/>
+        <input type="text" name='lastname' value="<%= user ? user.get('lastname'):''%>"/>
         <label>age</label> 
-        <input type="text" name='age'/>
+        <input type="text" name='age'value="<%= user ? user.get('age'):''%>"/>
         <hr/>
-        <button type="submit" class="btn">Create</button>
+       <button type="submit" class="btn"><%= user ? 'Update' : 'Create' %></button>
+       <% if(user) { %>
+        <input type="hidden" name="id" value="<%= user.id %>" />
+       <button type="button" class="btn btn-danger delete">Delete</button>
+       <% }; %>
+    </form>
     </script>
     <script type="text/template" id="user-list-template">
         <a href="#/new" class="btn btn-primary">New</a>
@@ -38,8 +43,8 @@
             <td><%= user.get('firstname') %></td>
                     <td><%= user.get('lastname') %></td>
                     <td><%= user.get('age') %></td>
-                    <td></td>
-            </tr>
+                    <td><a class="btn" href="#/edit/<%= user.id %>">Edit</a></td>
+                    </tr>
         <% }); %>
       </tbody>
     </table>
@@ -93,30 +98,57 @@
     });
     var EditUser = Backbone.View.extend({
        el: '.page',
-       render: function(){
-        this.$el.html('show form here');
-        var template = _.template($('#edit-user-template').html(),{});
-        this.$el.html(template);
-       },
-       events:{
-        'submit .edit-user-form':'saveUser'
+       render: function(options){
+        console.log('rendering edit');
+        var that = this;
+            if(options.id){
+                console.log('withid');
+                that.user = new User({id: options.id});
+                that.user.fetch({
+                    success:function(user){
+                
+                    var template = _.template($('#edit-user-template').html(),{user: user});
+                    that.$el.html(template);
+            }
+            })
+            }else{
+                console.log('without  id');
+            var template = _.template($('#edit-user-template').html(),{user: null});
+                that.$el.html(template);
         
+        
+            }
+        },
+       events:{
+        'submit .edit-user-form':'saveUser',
+        'click .delete': 'deleteUser'
        },
        saveUser: function(ev){
         var userDetails =$(ev.currentTarget).serializeObject();
         var user=new User();
         user.save(userDetails,{
             success: function(user){
-                console.log(user);
+                router.navigate('',{trigger: true});
             }
         })
         return false;
-       }
+       },
+        deleteUser: function (ev) {
+        this.user.destroy({
+          success: function () {
+            console.log('destroyed');
+            router.navigate('', {trigger:true});
+          }
+        })
+        return false;
+      }
     });
     var Router = Backbone.Router.extend({
         routes: {
             "":"home",
+            "edit/:id": "editUser",
             "new":"editUser"
+            
             }
     });
     
@@ -127,8 +159,8 @@
         userList.render();
         console.log('we have loaded home page');
     });
-    router.on('route:editUser',function(){
-        editUser.render();
+    router.on('route:editUser',function(id){
+        editUser.render({id:id});
     });
     Backbone.history.start();
 </script>
